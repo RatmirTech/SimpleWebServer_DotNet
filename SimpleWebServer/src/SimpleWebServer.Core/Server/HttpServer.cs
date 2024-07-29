@@ -1,4 +1,5 @@
 ﻿using SimpleWebServer.Core.Abstractions;
+using static SimpleWebServer.Core.Server.HTTPRequests;
 using System.Net;
 
 namespace SimpleWebServer.Core.Server
@@ -45,6 +46,8 @@ namespace SimpleWebServer.Core.Server
                 var middleware = _middlewares[middlewareIndex];
                 return middleware(context, () => ExecuteMiddleware(context, middlewareIndex + 1));
             }
+
+            GetResponseByMethod(context);
 
             middlewareIndex = 0;
             return Task.CompletedTask;
