@@ -25,7 +25,9 @@
         }
 
         private static readonly Dictionary<Type, Registration> _registrations = new();
-        private static Dictionary<Type, object> _scopedInstances;
+
+        [ThreadStatic]
+        private static Dictionary<Type, object> _scopedInstances = new();
 
         public static void RegisterSingleton<Tkey, TConcrete>()
         {
@@ -50,8 +52,48 @@
 
         private static dynamic Resolve(Type type)
         {
-            //TODO: Сделать рабочий Resolve
-            return null;
+            if (type == null)
+                throw new ArgumentNullException("Resolve: type is null.");
+
+            if (!_registrations.ContainsKey(type))
+                throw new InvalidOperationException($"Resolve: type {type.Name} not registered.");
+
+            var registration = _registrations[type];
+
+            switch (registration.Lifetime)
+            {
+                case Lifetime.Singleton:
+                    if (registration.Instance == null)
+                    {
+                        if (registration.ConcreteType != null)
+                        {
+                            registration.Instance = Activator.CreateInstance(registration.ConcreteType);
+                        }
+                    }
+                    return registration.Instance;
+
+                case Lifetime.Scoped:
+                    if (_scopedInstances == null)
+                    {
+                        _scopedInstances = new();
+                    }
+
+                    if (!_scopedInstances.ContainsKey(type))
+                    {
+                        if (registration.ConcreteType != null)
+                        {
+                            _scopedInstances[type] = Activator.CreateInstance(registration.ConcreteType);
+                        }
+                    }
+
+                    return _scopedInstances[type];
+
+                case Lifetime.Transient:
+                    return Activator.CreateInstance(registration.ConcreteType);
+
+                default:
+                    throw new InvalidOperationException();
+            }
         }
     }
 }
